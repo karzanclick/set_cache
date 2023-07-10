@@ -5,7 +5,7 @@ SetCache is a versatile data caching package for Dart and Flutter, allowing you 
 ## Features
 
 - Effortlessly cache maps, integers, and strings
-- Extension methods for easy caching: `"Test".cache('key')`
+- Extension methods for easy caching: `"value".cache('key')`
 - Singleton instance for direct caching: `SetCache.instance.save('key', 'value')`
 - Simple and intuitive API
 - Supports time-based expiration for cache entries
@@ -18,7 +18,7 @@ To start using SetCache in your Dart or Flutter project, add the following depen
 
 ```yaml
 dependencies:
-  set_cache: ^1.0.0
+  set_cache: ^1.0.2
 ```
 
 After adding the dependency, run `flutter pub get` to fetch the package.
@@ -31,6 +31,10 @@ After adding the dependency, run `flutter pub get` to fetch the package.
 import 'package:set_cache/set_cache.dart';
 
 void main() {
+  // specify the maximum duration cache is valid
+  SetCache.instance.init(maxAge: 7);
+
+  // 
   final data = "Test".cache('key');
   
   // Retrieve data from cache

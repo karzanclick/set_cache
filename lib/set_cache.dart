@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -6,66 +7,68 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SetCache {
   static final SetCache instance = SetCache();
-  double maxAge = 7; // 7 days
-  final key = 'sharedPreferencesCacheKey_';
-  final cacheAllKeys = 'cacheKey_all_keys';
+  Duration lifeTime = const Duration(days: 7);
+  final _key = 'sharedPreferencesCacheKey_';
+  String _cacheAllKeys = 'cacheKey_all_keys';
   Map allKeys = {};
-  bool isInit = false;
 
-  /// maxAge: days
-  Future init({double maxAge = 7}) async {
+  Completer initCompleter = Completer();
+
+  bool isInit() {
+    return initCompleter.isCompleted;
+  }
+
+  Future init({Duration lifeTime = const Duration(days: 7)}) async {
     await _SharedPreferencesHelper.init();
-    isInit = true;
-    this.maxAge = maxAge * 24 * 60 * 60 * 1000;
-    allKeys = _SharedPreferencesHelper.getMap(cacheAllKeys) ?? {};
-
+    this.lifeTime = lifeTime;
+    allKeys = _SharedPreferencesHelper.getMap(_cacheAllKeys) ?? {};
     try {
       allKeys.forEach((key, value) {
         final timestamp = value['timestamp'];
-        final maxAge = value['maxAge'];
-        if (timestamp != null && maxAge != null) {
+        final lifeTime = value['lifeTime'];
+        if (timestamp != null && lifeTime != null) {
           final now = DateTime.now().millisecondsSinceEpoch;
           final diff = now - timestamp;
-          if (diff > maxAge) {
+          if (diff > lifeTime) {
             remove(key);
           }
         }
       });
     } catch (e) {
-      // print(e);
       log(e.toString());
+    }
+    if (!initCompleter.isCompleted) {
+      initCompleter.complete();
     }
   }
 
-  void save(dynamic data, String key) {
-    if (allKeys.containsKey(key) || data == null) {
+  void save(dynamic data, String key, {bool isOverride = false}) {
+    if (!isOverride && (allKeys.containsKey(key) || data == null)) {
       return;
     }
     _SharedPreferencesHelper.save({
       'data': data,
-      'maxAge': maxAge,
+      'lifeTime': lifeTime.inMilliseconds,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
-    }, this.key + key);
+    }, _key + key);
 
     allKeys[key] = {
-      'maxAge': maxAge,
+      'lifeTime': lifeTime.inMilliseconds,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
-    _SharedPreferencesHelper.save(allKeys, cacheAllKeys);
+    _SharedPreferencesHelper.save(allKeys, _cacheAllKeys);
+    log("SetCache save: $key");
   }
 
   dynamic get(String key) {
-    //remove(key);
-    final data = _SharedPreferencesHelper.getMap(this.key + key);
-    // print('data: $data');
+    final data = _SharedPreferencesHelper.getMap(_key + key);
     if (data != null) {
       final timestamp = data['timestamp'];
-      final maxAge = data['maxAge'];
-      if (timestamp != null && maxAge != null) {
+      final lifeTime = data['lifeTime'];
+      if (timestamp != null && lifeTime != null) {
         final now = DateTime.now().millisecondsSinceEpoch;
         final diff = now - timestamp;
-        // print('diff: $diff, maxAge: $maxAge');
-        if (diff > maxAge) {
+        if (diff > lifeTime) {
           remove(key);
           return null;
         }
@@ -77,61 +80,115 @@ class SetCache {
 
   remove(String key) {
     allKeys.remove(key);
-    _SharedPreferencesHelper.remove(this.key + key);
+    _SharedPreferencesHelper.remove(_key + key);
   }
 
   void clear() {
     allKeys.forEach((key, value) {
-      _SharedPreferencesHelper.remove(this.key + key);
+      _SharedPreferencesHelper.remove(_key + key);
     });
-    _SharedPreferencesHelper.remove(cacheAllKeys);
+    _SharedPreferencesHelper.remove(_cacheAllKeys);
     allKeys = {};
   }
 }
 
 extension StringCacheExtension on String {
-  void cache(String key) {
-    if (SetCache.instance.isInit) {
-      SetCache.instance.save(this, key);
+  String cache(String key, {bool isOverride = false}) {
+    if (SetCache.instance.isInit()) {
+      SetCache.instance.save(this, key, isOverride: isOverride);
+      return this;
     }
     throw Exception('SetCache is not init');
   }
 
-  String getCache(String key) {
-    if (SetCache.instance.isInit) {
-      return SetCache.instance.get(key) ?? '';
+  String? getCache(String key) {
+    if (SetCache.instance.isInit()) {
+      return SetCache.instance.get(key);
     }
     throw Exception('SetCache is not init');
   }
 }
 
 extension MapCacheExtension on Map {
-  void cache(String key) {
-    if (SetCache.instance.isInit) {
-      SetCache.instance.save(this, key);
+  Map cache(String key, {bool isOverride = false}) {
+    if (SetCache.instance.isInit()) {
+      SetCache.instance.save(this, key, isOverride: isOverride);
+      return this;
     }
     throw Exception('SetCache is not init');
   }
 
-  Map getCache(String key) {
-    if (SetCache.instance.isInit) {
-      return SetCache.instance.get(key) ?? {};
+  Map? getCache(String key) {
+    if (SetCache.instance.isInit()) {
+      return SetCache.instance.get(key);
     }
     throw Exception('SetCache is not init');
   }
 }
 
 extension IntCacheExtension on int {
-  void cache(String key) {
-    if (SetCache.instance.isInit) {
-      SetCache.instance.save(this, key);
+  int cache(String key, {bool isOverride = false}) {
+    if (SetCache.instance.isInit()) {
+      SetCache.instance.save(this, key, isOverride: isOverride);
+      return this;
     }
     throw Exception('SetCache is not init');
   }
 
-  int getCache(String key) {
-    if (SetCache.instance.isInit) {
-      return SetCache.instance.get(key) ?? 0;
+  int? getCache(String key) {
+    if (SetCache.instance.isInit()) {
+      return SetCache.instance.get(key);
+    }
+    throw Exception('SetCache is not init');
+  }
+}
+
+extension DoubleCacheExtension on double {
+  double cache(String key, {bool isOverride = false}) {
+    if (SetCache.instance.isInit()) {
+      SetCache.instance.save(this, key, isOverride: isOverride);
+      return this;
+    }
+    throw Exception('SetCache is not init');
+  }
+
+  double? getCache(String key) {
+    if (SetCache.instance.isInit()) {
+      return SetCache.instance.get(key);
+    }
+    throw Exception('SetCache is not init');
+  }
+}
+
+extension ListCacheExtension on List {
+  List cache(String key, {bool isOverride = false}) {
+    if (SetCache.instance.isInit()) {
+      SetCache.instance.save(this, key, isOverride: isOverride);
+      return this;
+    }
+    throw Exception('SetCache is not init');
+  }
+
+  List? getCache(String key) {
+    if (SetCache.instance.isInit()) {
+      return SetCache.instance.get(key);
+    }
+    throw Exception('SetCache is not init');
+  }
+}
+
+extension BoolCacheExtension on bool {
+  bool cache(String key, {bool isOverride = false}) {
+    if (SetCache.instance.isInit()) {
+      SetCache.instance.save(this, key, isOverride: isOverride);
+      return this;
+    }
+    throw Exception('SetCache is not init');
+  }
+
+  bool? getCache(String key) {
+    if (SetCache.instance.isInit()) {
+      return SetCache.instance.get(key);
     }
     throw Exception('SetCache is not init');
   }
