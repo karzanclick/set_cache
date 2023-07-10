@@ -1,10 +1,10 @@
 name: set_cache
 description: SetCache Efficient data caching package for pub.dev, optimizing performance and reducing network calls. Boost your app's speed!
-version: 0.0.1
-repository:
+version: 1.0.0
+repository: https://github.com/karzanclick/set_cache
 
 environment:
-  sdk: '>=3.0.5 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
   flutter: ">=1.17.0"
 
 dependencies:
