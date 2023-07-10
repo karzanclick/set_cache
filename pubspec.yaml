@@ -1,6 +1,6 @@
 name: set_cache
 description: SetCache Efficient data caching package for pub.dev, optimizing performance and reducing network calls. Boost your app's speed!
-version: 1.0.0
+version: 1.0.1
 repository: https://github.com/karzanclick/set_cache
 
 environment:
