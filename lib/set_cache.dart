@@ -1,10 +1,17 @@
 import 'dart:async';
+// This import allows us to use asynchronous functions.
+
 import 'dart:convert';
+// This import allows us to convert data to and from JSON.
+
 import 'dart:developer';
-//
+// This import allows us to log messages to the console.
 
 import 'package:flutter/material.dart';
+// This import gives us access to the Flutter Material library.
+
 import 'package:shared_preferences/shared_preferences.dart';
+// This import gives us access to the SharedPreferences library.
 
 class SetCache {
   // The static instance of the class.
